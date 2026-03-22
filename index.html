@@ -901,6 +901,115 @@
         justify-content: center;
     }
 }
+
+
+/* --- FOOTER STYLES --- */
+.main-footer {
+    background-color: #000; /* Deep black to contrast with the #292929 body */
+    color: #fff;
+    padding: 80px 8% 40px;
+    position: relative;
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.footer-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 50px;
+}
+
+.footer-brand {
+    flex: 1;
+    min-width: 250px;
+}
+
+.footer-brand .logo {
+    margin-bottom: 20px;
+}
+
+.copyright {
+    color: #555;
+    font-size: 0.9rem;
+    margin-top: 60px;
+}
+
+.footer-links-group {
+    flex: 3;
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 30px;
+}
+
+.footer-col h4 {
+    font-size: 0.8rem;
+    letter-spacing: 2px;
+    color: #555;
+    margin-bottom: 25px;
+    font-weight: 600;
+}
+
+.footer-col ul {
+    list-style: none;
+}
+
+.footer-col li {
+    margin-bottom: 12px;
+}
+
+.footer-col a, .footer-col p {
+    color: #fff;
+    text-decoration: none;
+    font-size: 0.95rem;
+    transition: color 0.3s ease;
+}
+
+.footer-col a:hover {
+    color: #ffd900; /* Champagne Gold hover */
+}
+
+/* Back to Top Button */
+.back-to-top {
+    position: absolute;
+    bottom: 40px;
+    right: 8%;
+    width: 50px;
+    height: 50px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+    color: #fff;
+    transition: all 0.3s ease;
+}
+
+.back-to-top:hover {
+    background-color: #fff;
+    color: #000;
+    transform: translateY(-5px);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .footer-container {
+        flex-direction: column;
+        gap: 40px;
+    }
+    
+    .footer-links-group {
+        flex-direction: column;
+        gap: 40px;
+    }
+    
+    .copyright {
+        margin-top: 20px;
+    }
+}
   </style>
 </head>
 
@@ -1094,6 +1203,54 @@
 </div>
     </div>
 </section>
+
+
+<footer class="main-footer">
+    <div class="footer-container">
+        <div class="footer-brand">
+            <div class="logo">Lingunan<span> FitnessGym</span></div>
+            <p class="copyright">© 2024 by Lingunan Fitness Gym</p>
+        </div>
+
+        <div class="footer-links-group">
+            <div class="footer-col">
+                <h4>SITEMAP</h4>
+                <ul>
+                    <li><a href="#home">Home</a></li>
+                    <li><a href="#gallery">Gallery</a></li>
+                    <li><a href="#membership">Membership</a></li>
+                    <li><a href="#about">About Us</a></li>
+                </ul>
+            </div>
+
+            <div class="footer-col">
+                <h4>CONTACT</h4>
+                <ul>
+                    <li><a href="mailto:info@lingunangym.com">joyambiz@gmail.com</a></li>
+                    <li><p>+63 9XX XXX XXXX</p></li>
+                </ul>
+            </div>
+
+            <div class="footer-col">
+                <h4>ADDRESS</h4>
+                <p>3 New York, Valenzuela,<br>
+                   1446 Kalakhang Maynila</p>
+            </div>
+
+            <div class="footer-col">
+                <h4>LEGAL</h4>
+                <ul>
+                    <li><a href="#">Imprint</a></li>
+                    <li><a href="#">Privacy Statement</a></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <a href="#home" class="back-to-top" id="backToTop">
+        <span>↑</span>
+    </a>
+</footer>
   <script>
     const sections = document.querySelectorAll('.hero-section, .membership-section, .gallery-section, .location-section');
     const hamburger = document.getElementById('hamburger');
@@ -1250,6 +1407,28 @@ grid.addEventListener('mouseleave', startAutoRotation);
 
 sections.forEach(section => {
     observer.observe(section);
+});
+
+const backToTop = document.getElementById('backToTop');
+
+window.addEventListener('scroll', () => {
+    if (window.scrollY > 500) {
+        backToTop.style.opacity = '1';
+        backToTop.style.visibility = 'visible';
+    } else {
+        backToTop.style.opacity = '0';
+        backToTop.style.visibility = 'hidden';
+    }
+});
+
+// Smooth Scroll for all internal links
+document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+    anchor.addEventListener('click', function (e) {
+        e.preventDefault();
+        document.querySelector(this.getAttribute('href')).scrollIntoView({
+            behavior: 'smooth'
+        });
+    });
 });
   </script>
 </body>
