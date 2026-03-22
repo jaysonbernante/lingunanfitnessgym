@@ -14,7 +14,9 @@
             box-sizing: border-box;
             font-family: 'Inter', sans-serif;
         }
-
+html {
+    scroll-behavior: smooth;
+}
         body {
             background-color: #292929;
             height: 200vh;
@@ -133,22 +135,16 @@
         @media (max-width: 768px) {
             .nav-menu {
                 position: fixed;
-                top: 0;
-                right: -100%;
-                width: 280px;
-                height: 100vh;
-                /* Using a solid dark color so text is 100% visible */
-                background: #0f172a;
-                flex-direction: column;
-                padding: 80px 2rem 2rem 2rem;
-                /* Added top padding so links don't hit the top */
-                transition: 0.4s ease-in-out;
-                /* Higher z-index than the header (1000) */
-                z-index: 2000;
-                display: flex;
-                margin: 0;
-                border-left: 1px solid rgba(255, 217, 0, 0.3);
-                box-shadow: -10px 0 30px rgba(0, 0, 0, 0.5);
+        top: 0;
+        right: -100%; /* Hidden off-screen to the right */
+        width: 70%;
+        height: 100vh;
+        background-color: #000; /* Onyx Black */
+        display: flex;
+        flex-direction: column;
+        padding: 50px;
+        transition: right 0.4s ease-in-out;
+        z-index: 1000;
             }
 
             .nav-menu.active {
@@ -200,6 +196,7 @@
             .overlay.active {
                 opacity: 1;
                 visibility: visible;
+                display: none;
             }
 
 
@@ -1013,7 +1010,7 @@
         </nav>
 
         <div class="header-actions">
-            <a href="#" class="btn-cta">Login</a>
+            <a href="" class="btn-cta">Login</a>
             <div class="hamburger" id="hamburger">
                 <div></div>
                 <div></div>
@@ -1399,6 +1396,26 @@
                 });
             });
         });
+
+        
+const navLinks = document.querySelectorAll('.nav-menu ul li a');
+
+// Open Menu
+hamburger.addEventListener('click', () => {
+    navMenu.classList.add('active');
+});
+
+// Close Menu (using the X button)
+closeBtn.addEventListener('click', () => {
+    navMenu.classList.remove('active');
+});
+
+// Close Menu (when a link is clicked - important for mobile UX)
+navLinks.forEach(link => {
+    link.addEventListener('click', () => {
+        navMenu.classList.remove('active');
+    });
+});
     </script>
 </body>
 
