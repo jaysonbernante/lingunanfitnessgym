@@ -420,15 +420,29 @@ include '../../../component/admin_sidebar.php';
     .pay-method-btn.selected { border-color: #f5c518; background: rgba(245,197,24,0.12); color: #f5c518; }
     .pay-method-btn:hover:not(.selected) { border-color: #666; }
     .rfid-pay-section { margin-top: 16px; }
-    .rfid-pay-section .rfid-row { display: flex; gap: 8px; }
-    .rfid-pay-section input {
-        flex: 1; padding: 10px 12px; border-radius: 8px; border: 1px solid #444;
-        background: #1a1a1a; color: #fff; font-size: 14px;
+    /* Tap-to-scan button */
+    .rfid-tap-btn {
+        display: flex; align-items: center; gap: 10px;
+        width: 100%; padding: 14px 16px; border-radius: 10px;
+        border: 2px dashed #444; background: #1a1a1a;
+        color: #bbb; font-size: 14px; font-weight: 600;
+        cursor: pointer; transition: border-color 0.2s, color 0.2s;
+        box-sizing: border-box;
     }
-    .rfid-pay-section .btn-rfid-search {
-        padding: 10px 16px; border-radius: 8px; border: none;
-        background: #1976d2; color: #fff; font-weight: 600; cursor: pointer;
+    .rfid-tap-btn:hover { border-color: #1976d2; color: #fff; }
+    .rfid-tap-btn.scanning { border-color: #f5c518; color: #f5c518; animation: rfid-pulse 1s infinite; }
+    .rfid-tap-btn .rfid-icon { font-size: 1.3rem; flex-shrink: 0; }
+    @keyframes rfid-pulse { 0%,100%{opacity:1} 50%{opacity:0.45} }
+    /* Captured card */
+    .rfid-captured {
+        display: flex; align-items: center; gap: 10px;
+        padding: 10px 14px; border-radius: 8px;
+        background: rgba(67,160,71,0.15); border: 1px solid #43a047;
+        font-size: 14px; color: #81c784;
     }
+    .rfid-captured .rfid-val { font-weight: 700; flex: 1; }
+    .rfid-captured .rfid-clear { background: none; border: none; color: #e57373; cursor: pointer; font-size: 16px; padding: 0 4px; line-height: 1; }
+    /* Member info box */
     .rfid-member-info {
         background: #1a1a1a; border-radius: 10px; padding: 12px 14px; margin-top: 10px;
     }
@@ -547,18 +561,29 @@ include '../../../component/admin_sidebar.php';
         </div>
 
         <!-- RFID section (card only) -->
-        <div class="rfid-pay-section" id="rfidPaySection" style="display:none;">
-            <div style="font-size:13px;color:#bbb;margin-bottom:8px;">Tap or scan member's RFID card</div>
-            <div class="rfid-row">
-                <input type="text" id="saleRfidInput" placeholder="Scan RFID..." autocomplete="off">
-                <button type="button" class="btn-rfid-search" id="btnSaleRfidSearch">Search</button>
+        <div class="rfid-pay-section" id="rfidPaySection" style="display:none; margin-top:16px;">
+            <div style="font-size:13px;color:#bbb;margin-bottom:10px;font-weight:600;">Member RFID Card</div>
+            <!-- Tap button (shown when no card scanned yet) -->
+            <div id="saleRfidTapWrap">
+                <button type="button" class="rfid-tap-btn" id="btnSaleTapRfid">
+                    <span class="rfid-icon">&#128276;</span>
+                    <span id="saleTapLabel">Tap RFID Card to Scan</span>
+                </button>
             </div>
-            <div class="rfid-member-info" id="rfidMemberInfo" style="display:none;">
+            <!-- Captured card info (shown after scan) -->
+            <div class="rfid-captured" id="saleRfidCaptured" style="display:none;">
+                <span class="rfid-val" id="saleRfidVal"></span>
+                <button type="button" class="rfid-clear" id="btnSaleRfidClear" title="Clear">&#10005;</button>
+            </div>
+            <!-- Member info -->
+            <div class="rfid-member-info" id="rfidMemberInfo" style="display:none; margin-top:10px;">
                 <div style="font-weight:700;color:#fff;" id="rfidMemberName">-</div>
-                <div style="font-size:13px;color:#aaa;margin-top:2px;">Credit: <span id="rfidMemberCredit" style="color:#f5c518;font-weight:700;">₱0.00</span></div>
+                <div style="font-size:13px;color:#aaa;margin-top:2px;">Credit: <span id="rfidMemberCredit" style="color:#f5c518;font-weight:700;">&#8369;0.00</span></div>
                 <div id="rfidCreditStatus" style="margin-top:6px;font-size:13px;"></div>
             </div>
         </div>
+        <!-- Hidden HID capture input (off-screen) -->
+        <input type="text" id="saleRfidHidden" autocomplete="off" tabindex="-1" style="position:fixed;top:-9999px;left:-9999px;opacity:0;width:1px;height:1px;">
 
         <button class="btn-confirm-sale" id="btnConfirmSale" disabled>✔ Complete Sale</button>
         <button class="btn-modal-cancel" style="width:100%;margin-top:8px;" id="btnCancelSale">Back to Cart</button>
@@ -693,19 +718,33 @@ function selectPayMethod(method) {
         $('#rfidPaySection').show();
         rfidMemberData = null;
         $('#btnConfirmSale').prop('disabled', true);
-        $('#saleRfidInput').val('').focus();
         $('#rfidMemberInfo').hide();
+        $('#saleRfidCaptured').hide();
+        $('#saleRfidTapWrap').show();
+        saleRfidBuffer = '';
+        focusSaleRfid();
     }
 }
 
-// ── Search RFID for card payment ──
-function searchSaleRfid() {
-    const rfid = $('#saleRfidInput').val().trim();
-    if (!rfid) { showToast('Please scan or enter an RFID card'); return; }
+// ── RFID HID scanner for card payment ──
+var saleRfidBuffer = '', saleRfidTimer = null;
+
+function focusSaleRfid() {
+    $('#saleRfidHidden').focus();
+}
+
+function lookupSaleRfid(rfid) {
+    $('#saleTapLabel').text('Scanning\u2026');
+    $('#btnSaleTapRfid').addClass('scanning');
     $.getJSON('Ecommerce.php?ajax_rfid_pay=1&rfid=' + encodeURIComponent(rfid), function(res) {
+        $('#btnSaleTapRfid').removeClass('scanning');
+        $('#saleTapLabel').text('Tap RFID Card to Scan');
         if (res.found) {
             rfidMemberData = res.member;
             const credit = parseFloat(res.member.credit);
+            $('#saleRfidVal').text(rfid);
+            $('#saleRfidCaptured').show();
+            $('#saleRfidTapWrap').hide();
             $('#rfidMemberName').text(res.member.first_name + ' ' + res.member.last_name);
             $('#rfidMemberCredit').text('\u20b1' + credit.toFixed(2));
             if (credit >= cartGrandTotal) {
@@ -718,13 +757,37 @@ function searchSaleRfid() {
             }
             $('#rfidMemberInfo').show();
         } else {
-            showToast(res.error || 'Invalid RFID');
+            showToast(res.error || 'Invalid RFID card');
             rfidMemberData = null;
             $('#rfidMemberInfo').hide();
             $('#btnConfirmSale').prop('disabled', true);
+            focusSaleRfid();
         }
+    }).fail(function(){
+        showToast('Server error. Try again.');
+        $('#btnSaleTapRfid').removeClass('scanning');
+        $('#saleTapLabel').text('Tap RFID Card to Scan');
     });
 }
+
+// HID keyboard capture on hidden input
+$(document).on('keydown', '#saleRfidHidden', function(e) {
+    if (e.key === 'Enter') {
+        e.preventDefault();
+        clearTimeout(saleRfidTimer);
+        var val = saleRfidBuffer.trim(); saleRfidBuffer = ''; $(this).val('');
+        if (val) lookupSaleRfid(val);
+        return;
+    }
+    clearTimeout(saleRfidTimer);
+    saleRfidTimer = setTimeout(function() {
+        var val = saleRfidBuffer.trim(); saleRfidBuffer = ''; $('#saleRfidHidden').val('');
+        if (val) lookupSaleRfid(val);
+    }, 300);
+});
+$(document).on('input', '#saleRfidHidden', function() {
+    saleRfidBuffer += $(this).val(); $(this).val('');
+});
 
 // ── Checkout → show confirm modal ──
 function openConfirmModal() {
@@ -746,7 +809,11 @@ function openConfirmModal() {
     document.querySelectorAll('.pay-method-btn').forEach(b => b.classList.remove('selected'));
     $('#rfidPaySection').hide();
     $('#rfidMemberInfo').hide();
-    $('#saleRfidInput').val('');
+    $('#saleRfidCaptured').hide();
+    $('#saleRfidTapWrap').show();
+    $('#saleTapLabel').text('Tap RFID Card to Scan');
+    $('#btnSaleTapRfid').removeClass('scanning');
+    saleRfidBuffer = '';
     $('#btnConfirmSale').prop('disabled', true);
     $('#confirmSaleModal').addClass('active');
 }
@@ -759,10 +826,23 @@ $(document).ready(function() {
     $('#btnPayCash').on('click', function() { selectPayMethod('cash'); });
     $('#btnPayCard').on('click', function() { selectPayMethod('card'); });
 
+    // Tap button → focus hidden input
+    $(document).on('click', '#btnSaleTapRfid', function() { focusSaleRfid(); });
+
+    // Clear RFID card
+    $(document).on('click', '#btnSaleRfidClear', function() {
+        rfidMemberData = null;
+        $('#saleRfidCaptured').hide();
+        $('#saleRfidTapWrap').show();
+        $('#rfidMemberInfo').hide();
+        $('#saleTapLabel').text('Tap RFID Card to Scan');
+        saleRfidBuffer = '';
+        $('#btnConfirmSale').prop('disabled', true);
+        focusSaleRfid();
+    });
+
     // Confirm sale modal
     $('#btnCancelSale').on('click', () => $('#confirmSaleModal').removeClass('active'));
-    $('#btnSaleRfidSearch').on('click', searchSaleRfid);
-    $('#saleRfidInput').on('keydown', function(e) { if (e.key === 'Enter') searchSaleRfid(); });
     $('#confirmSaleModal').on('click', function(e) { if (e.target === this) $(this).removeClass('active'); });
 
     // Confirm sale submit
@@ -771,7 +851,7 @@ $(document).ready(function() {
         if (selectedPayMethod === 'card' && !rfidMemberData) { showToast('Please scan a valid RFID card first'); return; }
         const items = Object.keys(cart).map(id => ({ id: id, qty: cart[id].qty }));
         const postData = { ajax_sale: 1, items: JSON.stringify(items), payment_method: selectedPayMethod };
-        if (selectedPayMethod === 'card') postData.rfid = $('#saleRfidInput').val().trim();
+        if (selectedPayMethod === 'card') postData.rfid = $('#saleRfidVal').text().trim();
         $.ajax({
             url: 'Ecommerce.php',
             method: 'POST',

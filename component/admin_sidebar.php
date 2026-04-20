@@ -78,7 +78,7 @@ $currentFile = isset($page) ? $page : basename($_SERVER['PHP_SELF']);
         </span>
         Monitor Wallet
       </a></li>
-      <li><a href="<?php echo $basePath . 'management/membership.php'; ?>" class="<?php echo $currentFile === 'membership' ? 'active' : ''; ?>">
+      <li><a href="<?php echo $basePath . 'management/staff.php'; ?>" class="<?php echo $currentFile === 'staff' ? 'active' : ''; ?>">
         <span style="display:inline-block;vertical-align:middle;margin-right:7px;">
         <svg width="28" height="28" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
         <rect width="28" height="28" fill="url(#pattern0_93_78)"/>
@@ -134,7 +134,7 @@ $currentFile = isset($page) ? $page : basename($_SERVER['PHP_SELF']);
         </defs>
         </svg>
         </span>
-        Report
+        Transaction
       </a></li>
 
     </ul>
@@ -156,20 +156,7 @@ $currentFile = isset($page) ? $page : basename($_SERVER['PHP_SELF']);
         </span>
         RFID
       </a></li>
-      <li><a href="<?php echo $basePath . 'system/entryLog.php'; ?>" class="<?php echo $currentFile === 'entryLog' ? 'active' : ''; ?>">
-        <span style="display:inline-block;vertical-align:middle;margin-right:7px;">
-        <svg width="28" height="28" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
-        <rect width="28" height="28" fill="url(#pattern0_93_84)"/>
-        <defs>
-        <pattern id="pattern0_93_84" patternContentUnits="objectBoundingBox" width="1" height="1">
-        <use xlink:href="#image0_93_84" transform="scale(0.0111111)"/>
-        </pattern>
-        <image id="image0_93_84" width="90" height="90" preserveAspectRatio="none" xlink:href="data:image/png;base64,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"/>
-        </defs>
-        </svg>
-        </span>
-        Entry Log
-      </a></li>
+      
       <li><a href="<?php echo $basePath . 'system/Ecommerce.php'; ?>" class="<?php echo $currentFile === 'Ecommerce' ? 'active' : ''; ?>">
         <span style="display:inline-block;vertical-align:middle;margin-right:7px;">
         <svg width="28" height="28" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
@@ -202,7 +189,7 @@ $currentFile = isset($page) ? $page : basename($_SERVER['PHP_SELF']);
     </ul>
   </div>
   
-  <a class="logout" href="#">
+  <a class="logout" href="#" id="logoutBtn">
     <span style="display:inline-block;vertical-align:middle;margin-right:7px;">
       <svg width="30" height="30" viewBox="0 0 30 30" fill="none" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
         <rect width="30" height="30" fill="url(#pattern0_93_81)"/>
@@ -217,6 +204,32 @@ $currentFile = isset($page) ? $page : basename($_SERVER['PHP_SELF']);
     LOGOUT
   </a>
 </aside>
+
+<!-- ── Logout Confirmation Modal ─────────────────────────────────────── -->
+<div id="logoutModal" style="display:none;position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.55);z-index:10000;align-items:center;justify-content:center;">
+  <div style="background:#1e1e2e;border-radius:12px;padding:36px 32px;max-width:380px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,0.5);text-align:center;">
+    
+    <div style="font-size:1.2rem;font-weight:700;color:#fff;margin-bottom:8px;">Confirm Logout</div>
+    <div style="color:#aaa;font-size:0.95rem;margin-bottom:28px;">Are you sure you want to log out?</div>
+    <div style="display:flex;gap:12px;justify-content:center;">
+      <button id="logoutCancel" style="flex:1;padding:10px 0;border-radius:7px;border:1px solid #444;background:#2a2a3e;color:#ccc;font-size:0.95rem;cursor:pointer;">Cancel</button>
+      <a id="logoutConfirm" href="<?php echo $basePath . 'logout.php'; ?>" style="flex:1;padding:10px 0;border-radius:7px;border:none;background:#e53935;color:#fff;font-size:0.95rem;cursor:pointer;text-decoration:none;display:flex;align-items:center;justify-content:center;font-weight:600;">Logout</a>
+    </div>
+  </div>
+</div>
+
+<!-- ── Auto-logout Warning Modal ─────────────────────────────────────────── -->
+<div id="timeoutWarnModal" style="display:none;position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.55);z-index:10001;align-items:center;justify-content:center;">
+  <div style="background:#1e1e2e;border-radius:12px;padding:36px 32px;max-width:400px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,0.5);text-align:center;">
+    
+    <div style="font-size:1.2rem;font-weight:700;color:#fff;margin-bottom:8px;">Session Expiring</div>
+    <div style="color:#aaa;font-size:0.95rem;margin-bottom:6px;">You will be automatically logged out in</div>
+    <div id="timeoutCountdown" style="font-size:2rem;font-weight:800;color:#f57c00;margin-bottom:20px;">60</div>
+    <div style="color:#aaa;font-size:0.9rem;margin-bottom:24px;">seconds due to inactivity.</div>
+    <button id="timeoutStayBtn" style="width:100%;padding:11px 0;border-radius:7px;border:none;background:#1976d2;color:#fff;font-size:1rem;cursor:pointer;font-weight:600;">Stay Logged In</button>
+  </div>
+</div>
+
 <script>
   // Sidebar loading overlay and responsive toggle
   document.addEventListener('DOMContentLoaded', function() {
@@ -285,5 +298,75 @@ $currentFile = isset($page) ? $page : basename($_SERVER['PHP_SELF']);
     }
     window.addEventListener('resize', updateSidebarToggle);
     updateSidebarToggle();
+
+    // ── Logout confirmation modal ──────────────────────────────────────────
+    var logoutBtn    = document.getElementById('logoutBtn');
+    var logoutModal  = document.getElementById('logoutModal');
+    var logoutCancel = document.getElementById('logoutCancel');
+    if (logoutBtn && logoutModal) {
+      logoutBtn.addEventListener('click', function(e) {
+        e.preventDefault();
+        logoutModal.style.display = 'flex';
+      });
+      logoutCancel.addEventListener('click', function() {
+        logoutModal.style.display = 'none';
+      });
+      logoutModal.addEventListener('click', function(e) {
+        if (e.target === logoutModal) logoutModal.style.display = 'none';
+      });
+    }
+
+    // ── Auto-logout after 20 min of inactivity (client-side guard) ─────────
+    var IDLE_TIMEOUT   = 20 * 60 * 1000; // 20 minutes in ms
+    var WARN_BEFORE    = 60 * 1000;       // show warning 60s before logout
+    var logoutUrl      = document.getElementById('logoutConfirm') ? document.getElementById('logoutConfirm').href : 'logout.php';
+    var warnModal      = document.getElementById('timeoutWarnModal');
+    var countdownEl    = document.getElementById('timeoutCountdown');
+    var stayBtn        = document.getElementById('timeoutStayBtn');
+    var idleTimer      = null;
+    var warnTimer      = null;
+    var countdownTimer = null;
+    var warnSeconds    = 60;
+
+    function resetIdleTimer() {
+      // If warning is showing, hide it first
+      if (warnModal && warnModal.style.display === 'flex') return; // don't reset during countdown
+      clearTimeout(idleTimer);
+      clearTimeout(warnTimer);
+      idleTimer = setTimeout(function() {
+        // Show warning modal
+        if (warnModal) {
+          warnSeconds = 60;
+          if (countdownEl) countdownEl.textContent = warnSeconds;
+          warnModal.style.display = 'flex';
+          clearInterval(countdownTimer);
+          countdownTimer = setInterval(function() {
+            warnSeconds--;
+            if (countdownEl) countdownEl.textContent = warnSeconds;
+            if (warnSeconds <= 0) {
+              clearInterval(countdownTimer);
+              window.location.href = logoutUrl;
+            }
+          }, 1000);
+        } else {
+          window.location.href = logoutUrl;
+        }
+      }, IDLE_TIMEOUT - WARN_BEFORE);
+    }
+
+    if (stayBtn) {
+      stayBtn.addEventListener('click', function() {
+        clearInterval(countdownTimer);
+        if (warnModal) warnModal.style.display = 'none';
+        resetIdleTimer();
+      });
+    }
+
+    // Reset on any user activity
+    ['mousemove','mousedown','keydown','scroll','touchstart','click'].forEach(function(evt) {
+      document.addEventListener(evt, resetIdleTimer, true);
+    });
+
+    resetIdleTimer(); // start the timer
   });
 </script>

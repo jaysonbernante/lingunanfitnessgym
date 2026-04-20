@@ -159,7 +159,7 @@ include '../../../component/admin_sidebar.php';
 </style>
 <body>
 <div class="rev-content" id="revContent">
-   <h1>Wallet Management</h1>
+   <h1>Revenue Management</h1>
     <div class="rev-header">
         <h1></h1>
         <button class="btn-export-pdf" id="btnExportPdf">🖨 Export PDF</button>

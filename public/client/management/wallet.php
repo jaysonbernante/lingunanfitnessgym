@@ -1,5 +1,20 @@
 <?php
 require_once '../../../app/config/connection.php';
+if (session_status() === PHP_SESSION_NONE) session_start();
+
+// Ensure wallet transaction log exists
+$pdo->exec("CREATE TABLE IF NOT EXISTS wallet_transactions (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    member_id INT NOT NULL,
+    transaction_type VARCHAR(32) NOT NULL,
+    amount DECIMAL(10,2) NOT NULL,
+    balance_before DECIMAL(10,2) NOT NULL,
+    balance_after DECIMAL(10,2) NOT NULL,
+    reason TEXT,
+    created_by VARCHAR(100),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX(member_id)
+)");
 
 // AJAX: lookup member by RFID
 if (isset($_GET['ajax_rfid'])) {
@@ -29,14 +44,90 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax_add_credit'])) {
     header('Content-Type: application/json');
     $id     = intval($_POST['member_id'] ?? 0);
     $amount = floatval($_POST['amount'] ?? 0);
+    $user   = $_SESSION['user_name'] ?? 'system';
     if ($id > 0 && $amount > 0) {
-        $pdo->prepare("UPDATE members SET credit = credit + ? WHERE id = ?")->execute([$amount, $id]);
-        $stmt = $pdo->prepare("SELECT credit FROM members WHERE id = ?");
-        $stmt->execute([$id]);
-        $row = $stmt->fetch();
-        echo json_encode(['success' => true, 'credit' => $row['credit']]);
+        try {
+            $pdo->beginTransaction();
+            $stmt = $pdo->prepare("SELECT COALESCE(credit,0) AS credit FROM members WHERE id = ? FOR UPDATE");
+            $stmt->execute([$id]);
+            $row = $stmt->fetch();
+            if (!$row) {
+                throw new Exception('Member not found.');
+            }
+            $before = floatval($row['credit']);
+            $after = $before + $amount;
+            $pdo->prepare("UPDATE members SET credit = credit + ? WHERE id = ?")->execute([$amount, $id]);
+            $pdo->prepare("INSERT INTO wallet_transactions (member_id, transaction_type, amount, balance_before, balance_after, reason, created_by) VALUES (?, 'credit_add', ?, ?, ?, 'Credit input', ?)")
+                ->execute([$id, $amount, $before, $after, $user]);
+            $pdo->commit();
+            echo json_encode(['success' => true, 'credit' => $after]);
+        } catch (Exception $e) {
+            if ($pdo->inTransaction()) $pdo->rollBack();
+            echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+        }
     } else {
-        echo json_encode(['success' => false]);
+        echo json_encode(['success' => false, 'error' => 'Invalid member or amount.']);
+    }
+    exit;
+}
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax_adjust_credit'])) {
+    header('Content-Type: application/json');
+    $id        = intval($_POST['member_id'] ?? 0);
+    $amount    = abs(floatval($_POST['amount'] ?? 0));
+    $action    = trim($_POST['action'] ?? 'refund');
+    $direction = trim($_POST['direction'] ?? 'decrease');
+    $reason    = trim($_POST['reason'] ?? '');
+    $user      = $_SESSION['user_name'] ?? 'system';
+
+    if ($id > 0 && $amount > 0 && $reason !== '') {
+        try {
+            $pdo->beginTransaction();
+            $stmt = $pdo->prepare("SELECT COALESCE(credit,0) AS credit FROM members WHERE id = ? FOR UPDATE");
+            $stmt->execute([$id]);
+            $row = $stmt->fetch();
+            if (!$row) {
+                throw new Exception('Member not found.');
+            }
+            $before = floatval($row['credit']);
+            $change = 0;
+            $type = 'refund';
+            if ($action === 'refund') {
+                $change = -$amount;
+                $type = 'refund';
+            } else {
+                $change = $direction === 'increase' ? $amount : -$amount;
+                $type = 'correction';
+            }
+            $after = $before + $change;
+            if ($after < 0) {
+                throw new Exception('Resulting credit cannot be negative.');
+            }
+            $pdo->prepare("UPDATE members SET credit = credit + ? WHERE id = ?")->execute([$change, $id]);
+            $pdo->prepare("INSERT INTO wallet_transactions (member_id, transaction_type, amount, balance_before, balance_after, reason, created_by) VALUES (?, ?, ?, ?, ?, ?, ?)")
+                ->execute([$id, $type, $change, $before, $after, $reason, $user]);
+            $pdo->commit();
+            echo json_encode(['success' => true, 'credit' => $after]);
+        } catch (Exception $e) {
+            if ($pdo->inTransaction()) $pdo->rollBack();
+            echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+        }
+    } else {
+        echo json_encode(['success' => false, 'error' => 'Please provide a valid amount and reason.']);
+    }
+    exit;
+}
+
+if (isset($_GET['ajax_wallet_history'])) {
+    header('Content-Type: application/json');
+    $memberId = intval($_GET['member_id'] ?? 0);
+    if ($memberId > 0) {
+        $stmt = $pdo->prepare("SELECT transaction_type, amount, balance_before, balance_after, reason, created_by, created_at FROM wallet_transactions WHERE member_id = ? ORDER BY created_at DESC LIMIT 50");
+        $stmt->execute([$memberId]);
+        $history = $stmt->fetchAll();
+        echo json_encode(['success' => true, 'history' => $history]);
+    } else {
+        echo json_encode(['success' => false, 'error' => 'Member ID missing.']);
     }
     exit;
 }
@@ -209,12 +300,29 @@ include '../../../component/admin_sidebar.php';
     }
     .modal-box h2 { margin: 0 0 20px; font-size: 1.2rem; }
     .modal-box label { display: block; font-size: 13px; color: #bbb; margin-bottom: 6px; }
-    .modal-box input[type="number"] {
+    .modal-box input[type="number"],
+    .modal-box select,
+    .modal-box textarea {
         width: 100%; padding: 9px 12px; border-radius: 8px;
         border: 1px solid #444; background: #1a1a1a;
         color: #fff; font-size: 15px; box-sizing: border-box; margin-bottom: 18px;
     }
+    .modal-box textarea { resize: vertical; min-height: 90px; }
     .modal-actions { display: flex; gap: 10px; }
+    .wallet-history-section {
+        width: 100%; margin-top: 32px; background: #111;
+        border-radius: 20px; padding: 24px;
+    }
+    .wallet-history-section h3 { margin: 0 0 8px; font-size: 1rem; color: #f5c518; }
+    .wallet-history-section p { margin: 0 0 18px; color: #aaa; font-size: 13px; }
+    .history-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    .history-table th, .history-table td {
+        padding: 10px 12px; border-bottom: 1px solid #222;
+        color: #ddd; text-align: left;
+    }
+    .history-table th { background: #181818; color: #f5c518; }
+    .history-table tbody tr:hover { background: rgba(255,255,255,0.04); }
+    .history-empty { color: #888; text-align: center; padding: 24px 0; }
     .badge-card-required { background: #c62828; color: #fff; padding: 2px 10px; border-radius: 10px; font-size: 12px; font-weight: 700; }
     .badge-card-optional { background: #555; color: #ccc; padding: 2px 10px; border-radius: 10px; font-size: 12px; font-weight: 700; }
     .badge-card-has { background: #2e7d32; color: #fff; padding: 2px 10px; border-radius: 10px; font-size: 12px; font-weight: 700; }
@@ -309,7 +417,27 @@ include '../../../component/admin_sidebar.php';
                     <span class="wifi-icon">&#8767;</span>
                 </div>
                 <button class="btn-input-credit" id="inputCreditBtn">Input Credit</button>
+                <button class="btn-input-credit" id="adjustCreditBtn" style="background:#b71c1c;border-color:#b71c1c;">Refund / Correct</button>
             </div>
+        </div>
+        <div class="wallet-history-section" id="walletHistorySection" style="display:none;">
+            <h3>Wallet Transaction History</h3>
+            <p>Recent wallet operations, refunds, and corrections are recorded with a required reason.</p>
+            <table class="history-table">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Type</th>
+                        <th>Amount</th>
+                        <th>Balance After</th>
+                        <th>Reason</th>
+                        <th>By</th>
+                    </tr>
+                </thead>
+                <tbody id="historyBody">
+                    <tr><td colspan="6" class="history-empty">No history loaded yet.</td></tr>
+                </tbody>
+            </table>
         </div>
     </div>
 
@@ -322,6 +450,33 @@ include '../../../component/admin_sidebar.php';
             <div class="modal-actions">
                 <button class="btn-confirm" id="confirmCredit">Confirm</button>
                 <button class="btn-cancel-modal" id="cancelCredit">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Adjust Credit Modal -->
+    <div class="modal-overlay" id="adjustModal">
+        <div class="modal-box">
+            <h2>Refund / Correct Credit</h2>
+            <label>Action</label>
+            <select id="adjustAction">
+                <option value="refund">Refund credit</option>
+                <option value="correction">Correct credit</option>
+            </select>
+            <div id="adjustDirectionRow">
+                <label>Correction type</label>
+                <select id="adjustDirection">
+                    <option value="decrease">Decrease credit</option>
+                    <option value="increase">Increase credit</option>
+                </select>
+            </div>
+            <label>Amount (₱)</label>
+            <input type="number" id="adjustAmount" min="0.01" step="0.01" placeholder="Enter amount">
+            <label>Reason</label>
+            <textarea id="adjustReason" placeholder="Enter reason for refund or correction"></textarea>
+            <div class="modal-actions">
+                <button class="btn-confirm" id="confirmAdjust">Confirm</button>
+                <button class="btn-cancel-modal" id="cancelAdjust">Cancel</button>
             </div>
         </div>
     </div>
@@ -395,7 +550,42 @@ include '../../../component/admin_sidebar.php';
         buildChart(currentCredit);
         $('#walletPanel').addClass('active');
         $('#cardPlaceholder').hide();
+        $('#walletHistorySection').show();
+        loadWalletHistory(currentMemberId);
         showToast('Member found successfully.', 'success');
+    }
+
+    function formatAmount(amount) {
+        const sign = amount < 0 ? '-' : '';
+        return sign + '₱' + Math.abs(amount).toFixed(2);
+    }
+
+    function loadWalletHistory(memberId) {
+        if (!memberId) {
+            $('#historyBody').html('<tr><td colspan="6" class="history-empty">No member selected.</td></tr>');
+            return;
+        }
+        $('#historyBody').html('<tr><td colspan="6" class="history-empty">Loading history...</td></tr>');
+        $.getJSON('wallet.php', { ajax_wallet_history: 1, member_id: memberId }, function(res) {
+            if (res.success && Array.isArray(res.history) && res.history.length) {
+                const rows = res.history.map(function(item) {
+                    const typeLabel = item.transaction_type === 'credit_add' ? 'Credit Added' : (item.transaction_type === 'refund' ? 'Refund' : 'Correction');
+                    return '<tr>' +
+                        '<td>' + item.created_at + '</td>' +
+                        '<td>' + typeLabel + '</td>' +
+                        '<td>' + formatAmount(item.amount) + '</td>' +
+                        '<td>₱' + parseFloat(item.balance_after).toFixed(2) + '</td>' +
+                        '<td>' + (item.reason ? $('<div>').text(item.reason).html() : '-') + '</td>' +
+                        '<td>' + (item.created_by || '-') + '</td>' +
+                    '</tr>';
+                });
+                $('#historyBody').html(rows.join(''));
+            } else {
+                $('#historyBody').html('<tr><td colspan="6" class="history-empty">No transaction history found for this member.</td></tr>');
+            }
+        }).fail(function() {
+            $('#historyBody').html('<tr><td colspan="6" class="history-empty">Unable to load history. Try again.</td></tr>');
+        });
     }
 
     function searchByRFID() {
@@ -441,6 +631,29 @@ include '../../../component/admin_sidebar.php';
         if (e.target === this) $('#creditModal').removeClass('active');
     });
 
+    $('#adjustCreditBtn').on('click', function() {
+        $('#adjustAmount').val('');
+        $('#adjustReason').val('');
+        $('#adjustAction').val('refund');
+        $('#adjustDirection').val('decrease');
+        $('#adjustDirectionRow').hide();
+        $('#adjustModal').addClass('active');
+    });
+    $('#cancelAdjust').on('click', function() {
+        $('#adjustModal').removeClass('active');
+    });
+    $('#adjustModal').on('click', function(e) {
+        if (e.target === this) $('#adjustModal').removeClass('active');
+    });
+
+    $('#adjustAction').on('change', function() {
+        if ($(this).val() === 'refund') {
+            $('#adjustDirectionRow').hide();
+        } else {
+            $('#adjustDirectionRow').show();
+        }
+    });
+
     $('#confirmCredit').on('click', function() {
         const amount = parseFloat($('#creditAmount').val());
         if (!amount || amount <= 0) {
@@ -459,13 +672,58 @@ include '../../../component/admin_sidebar.php';
                     $('#donutAmount').text('₱' + currentCredit.toFixed(1));
                     buildChart(currentCredit);
                     $('#creditModal').removeClass('active');
+                    loadWalletHistory(currentMemberId);
                     showToast('₱' + amount.toFixed(2) + ' credit added successfully.', 'success');
                 } else {
-                    showToast('Failed to add credit. Please try again.');
+                    showToast(res.error || 'Failed to add credit. Please try again.');
                 }
             },
             error: function() {
                 showToast('Server error. Could not add credit.');
+            }
+        });
+    });
+
+    $('#confirmAdjust').on('click', function() {
+        const amount = parseFloat($('#adjustAmount').val());
+        const reason = $('#adjustReason').val().trim();
+        const action = $('#adjustAction').val();
+        const direction = $('#adjustDirection').val();
+        if (!amount || amount <= 0) {
+            showToast('Please enter a valid adjustment amount.');
+            return;
+        }
+        if (!reason) {
+            showToast('Please enter a reason for this action.');
+            return;
+        }
+        $.ajax({
+            url: 'wallet.php',
+            method: 'POST',
+            data: {
+                ajax_adjust_credit: 1,
+                member_id: currentMemberId,
+                amount: amount,
+                action: action,
+                direction: direction,
+                reason: reason
+            },
+            dataType: 'json',
+            success: function(res) {
+                if (res.success) {
+                    currentCredit = parseFloat(res.credit);
+                    $('#infoCredit').text('₱' + currentCredit.toFixed(1));
+                    $('#donutAmount').text('₱' + currentCredit.toFixed(1));
+                    buildChart(currentCredit);
+                    $('#adjustModal').removeClass('active');
+                    loadWalletHistory(currentMemberId);
+                    showToast('Credit updated successfully.', 'success');
+                } else {
+                    showToast(res.error || 'Failed to update credit.');
+                }
+            },
+            error: function() {
+                showToast('Server error. Could not update credit.');
             }
         });
     });

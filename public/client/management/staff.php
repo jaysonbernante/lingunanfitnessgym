@@ -1,5 +1,5 @@
 <?php
-$page = 'membership';
+$page = 'staff';
 include '../../../component/admin_header.php';
 include '../../../component/admin_sidebar.php';
 ?>
@@ -385,7 +385,7 @@ include '../../../component/admin_sidebar.php';
             var search = $('#searchUsername').val();
             var role   = $('#roleFilter').val();
             $.ajax({
-                url: 'membership.php',
+                url: 'staff.php',
                 method: 'GET',
                 data: { search: search, role: role },
                 success: function (data) {

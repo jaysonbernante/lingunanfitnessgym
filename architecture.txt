@@ -15,8 +15,15 @@ Capstone_1
 │   │   └── toastednotif.css
 │   ├── ico
 │   │   ├── dashboard_active.png
-│   │   └── dashboard.png
+│   │   ├── dashboard.png
+│   │   ├── member_active.png
+│   │   ├── member.png
+│   │   ├── wallet_active.png
+│   │   └── wallet.png
 │   ├── image
+│   │   ├── products
+│   │   │   └── prod_1776096467_4347be79.png
+│   │   ├── card.png
 │   │   ├── gallerybackground.jpg
 │   │   ├── hero-background.jpg
 │   │   ├── location.png
@@ -29,19 +36,24 @@ Capstone_1
 │   ├── admin_sidebar.php
 │   ├── landingPage-footer.php
 │   └── landingPage-header.php
+│   database
+│   ├── dbgym.sql
+│   └── revenue-report-2026.pdf
 │   public
 │   ├── client
 │   │   ├── management
 │   │   │   ├── member.php
-│   │   │   ├── membership.php
 │   │   │   ├── report.php
+│   │   │   ├── staff.php
 │   │   │   ├── visitorLog.php
 │   │   │   └── wallet.php
 │   │   ├── system
 │   │   │   ├── backup.php
 │   │   │   ├── Ecommerce.php
 │   │   │   ├── entryLog.php
+│   │   │   ├── revenue.php
 │   │   │   └── RFID.php
+│   │   ├── dashboard_new.php
 │   │   ├── dashboard.php
 │   │   ├── index.php
 │   │   ├── login.php
